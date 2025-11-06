@@ -59,7 +59,7 @@ jobs:
           ./wingetcreate.exe update Akka.AkkaCli `
             --version ${{ steps.version.outputs.VERSION }} `
             --urls "${{ steps.installer.outputs.URL }}" `
-            --out ./manifests/
+            --out .
 
           # Validate the generated manifest
           winget validate ./manifests/a/Akka/AkkaCli/${{ steps.version.outputs.VERSION }}/
