@@ -21,6 +21,5 @@ jobs:
         with:
           identifier: Akka.AkkaCli
           token: ${{ secrets.WINGET_TOKEN }}
-          # Optional: uncomment to customize
-          # version: ${{ github.event.inputs.version || github.event.release.tag_name }}
+          version: ${{ github.event.inputs.version || github.event.release.tag_name }}
           # installers-regex: '\\.zip$'  # Only process .zip files
