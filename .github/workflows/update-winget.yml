@@ -3,17 +3,6 @@ name: Update WinGet Package
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (e.g., 1.0.1)'
-        required: true
-        type: string
-      dry_run:
-        description: 'Dry run (validate only, do not submit)'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   update-winget:
@@ -27,7 +16,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          $version = "${{ github.event.inputs.version || github.event.release.tag_name }}" -replace '^v', ''
+          $version = "${{ github.event.release.tag_name }}" -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
           echo "Version to publish: $version"
 
@@ -39,47 +28,13 @@ jobs:
           echo "URL=$url" >> $env:GITHUB_OUTPUT
           echo "Installer URL: $url"
 
-      - name: Verify installer URL is accessible
-        run: |
-          $url = "${{ steps.installer.outputs.URL }}"
-          try {
-            $response = Invoke-WebRequest -Uri $url -Method Head -ErrorAction Stop
-            Write-Host "✅ Installer URL is accessible (Status: $($response.StatusCode))"
-          } catch {
-            Write-Error "❌ Installer URL is not accessible: $url"
-            exit 1
-          }
-
-      # Dry run mode: validate manifest without submitting
-      - name: Validate manifest (dry run)
-        if: github.event.inputs.dry_run == 'true'
-        run: |
-          Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest" -OutFile wingetcreate.exe
-
-          ./wingetcreate.exe update Akka.AkkaCli `
-            --version ${{ steps.version.outputs.VERSION }} `
-            --urls "${{ steps.installer.outputs.URL }}" `
-            --out .
-
-          # Validate the generated manifest
-          winget validate ./manifests/a/Akka/AkkaCli/${{ steps.version.outputs.VERSION }}/
-
-      - name: Upload manifest (dry run)
-        if: github.event.inputs.dry_run == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: winget-manifest-${{ steps.version.outputs.VERSION }}
-          path: manifests/
-
-      # Production mode: submit to winget-pkgs
       - name: Submit to WinGet
-        if: github.event.inputs.dry_run != 'true'
         uses: vedantmgoyal9/winget-releaser@v2
         with:
           identifier: Akka.AkkaCli
           version: ${{ steps.version.outputs.VERSION }}
           installers-regex: '^akka_windows_amd64_.*\.zip$'
-          release-tag: ${{ github.event.inputs.version || github.event.release.tag_name }}
+          release-tag: ${{ github.event.release.tag_name }}
           token: ${{ secrets.WINGET_TOKEN }}
           max-versions-to-keep: 5  # Keep only last 5 versions in manifest
 
@@ -89,13 +44,7 @@ jobs:
           echo "### ✅ WinGet Update Successful" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ steps.version.outputs.VERSION }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "- **Installer**: ${{ steps.installer.outputs.URL }}" >> $env:GITHUB_STEP_SUMMARY
-          if ("${{ github.event.inputs.dry_run }}" -eq "true") {
-            echo "- **Mode**: Dry run (validation only)" >> $env:GITHUB_STEP_SUMMARY
-          } else {
-            echo "- **Mode**: Production (PR created)" >> $env:GITHUB_STEP_SUMMARY
-            echo "- **Next step**: Check [winget-pkgs PRs](https://github.com/microsoft/winget-pkgs/pulls)" >> $env:GITHUB_STEP_SUMMARY
-          }
+          echo "- **Next step**: Check [winget-pkgs PRs](https://github.com/microsoft/winget-pkgs/pulls)" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Notify on failure
         if: failure()
