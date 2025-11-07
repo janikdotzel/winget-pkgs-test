@@ -78,7 +78,7 @@ jobs:
         with:
           identifier: Akka.AkkaCli
           version: ${{ steps.version.outputs.VERSION }}
-          installers-regex: '\.zip$'
+          installers-regex: '^akka_windows_amd64_.*\.zip$'
           release-tag: ${{ github.event.inputs.version || github.event.release.tag_name }}
           token: ${{ secrets.WINGET_TOKEN }}
           max-versions-to-keep: 5  # Keep only last 5 versions in manifest
